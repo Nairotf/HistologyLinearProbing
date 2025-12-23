@@ -13,6 +13,8 @@ def get_features(slide_ids, features_dir):
     for slide_id in tqdm.tqdm(slide_ids):
         if ".svs" in slide_id:
             slide_id = slide_id.replace(".svs", "")
+        if ".tif" in slide_id:
+            slide_id = slide_id.replace(".tif", "")
         features_file = os.path.join(features_dir, f"{slide_id}.h5")
         with h5py.File(features_file, 'r') as f:
             features = f['features'][:]

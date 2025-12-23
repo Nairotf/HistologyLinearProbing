@@ -23,7 +23,7 @@ workflow {
             )
         }
     feature_paths = feature_extractors.map { row ->
-        tuple( row[1], file("${params.features_dir}${row[3]}x_${row[2]}px_${row[5]}px_overlap/slide_features_${row[1]}/"))
+        tuple( row[1], file("${params.features_dir}/${row[3]}x_${row[2]}px_${row[5]}px_overlap/slide_features_${row[1]}/"))
     }
     script_import_features = Channel.value(file("${projectDir}/bin/import_features.py"))
     script_grid_search_classification = Channel.value(file("${projectDir}/bin/grid_search_classification.py"))
