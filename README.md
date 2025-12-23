@@ -1,5 +1,9 @@
 ## HistologyLinearProbing
 
+<p align="center">
+  <img src="imgs/logo.png" alt="Histology Linear Probing Pipeline" width="40%"/>
+</p>
+
 **Linear probing pipeline** for histopathology to evaluate different **feature extractors** (foundation models) using simple linear models (ridge, lasso and linear/logistic regression) on genes of interest (for example, *MKI67* and *ESR1*).
 
 The workflow is implemented in **Nextflow DSL2** and uses containers (Wave/Singularity) to run both the Python part (feature import and grid search) and the R part (visualizations).
