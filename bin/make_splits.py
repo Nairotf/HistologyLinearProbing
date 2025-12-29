@@ -3,7 +3,6 @@ Splits manager module
 """
 import os
 import pandas as pd
-from tqdm import tqdm
 from sklearn.model_selection import train_test_split, KFold
 
 class SplitManager:
@@ -77,7 +76,7 @@ class SplitManager:
         output_path = f"{self.splits_dir}/{self.output_name}/"
         os.makedirs(output_path, exist_ok=True)
         
-        for i in tqdm(range(self.folds)):
+        for i in range(self.folds):
             splits_bool = self.__create_split(i)
             splits_bool.drop(columns=["label"]).to_csv(f"{output_path}/splits_{i}_bool.csv")
             

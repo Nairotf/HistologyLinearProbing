@@ -8,41 +8,17 @@ suppressPackageStartupMessages({
 })
 
 main <- function(results_dir, output_path = "boxplot.png") {
-  files <- list.files(results_dir, pattern = "cv_result", full.names = TRUE)
-  if (length(files) == 0) {
-    message("No valid cv_result files found in: ", results_dir)
-    quit(status = 0)
-  }
-
-  fold_cols <- c(
-    "split0_test_roc_auc",
-    "split1_test_roc_auc",
-    "split2_test_roc_auc",
-    "split3_test_roc_auc",
-    "split4_test_roc_auc"
-  )
-
+  files <- list.files(results_dir, pattern = "test_metrics", full.names = TRUE)
+  roc_auc_cols <- c("roc_auc")
   dfs <- list()
+  print(files)
 
   for (f in files) {
     data <- read_csv(f, show_col_types = FALSE)
 
-    # Skip empty files or those without mean_test_roc_auc
-    if (nrow(data) == 0 || !("mean_test_roc_auc" %in% colnames(data))) {
-      next
-    }
-
-    # Row with best mean_test_roc_auc
-    best_idx <- which.max(data$mean_test_roc_auc)
-    best_model <- data[best_idx, , drop = FALSE]
-
-    # Ensure all ROC AUC fold columns are present
-    if (!all(fold_cols %in% colnames(best_model))) {
-      next
-    }
-
     # Extract the 5 ROC AUC values
-    auc_values <- unlist(best_model[fold_cols], use.names = FALSE)
+    auc_values <- unlist(data[roc_auc_cols], use.names = FALSE)
+    print(auc_values)
     df_file <- data.frame(roc_auc = auc_values, stringsAsFactors = FALSE)
 
     file_name <- basename(f)
@@ -54,20 +30,11 @@ main <- function(results_dir, output_path = "boxplot.png") {
     dfs[[length(dfs) + 1]] <- df_file
   }
 
-  if (length(dfs) == 0) {
-    message("No valid cv_result files with ROC AUC structure in: ", results_dir)
-    quit(status = 0)
-  }
-
   df <- bind_rows(dfs)
-  print(df)
-
-  theme_set(theme_bw())
-
   p <- ggplot(df, aes(x = feature_extractor, y = roc_auc, fill = algorithm)) +
     geom_boxplot() +
     theme_minimal() +
-    labs(x = "Feature extractor", y = "ROC AUC", title = "Benchmark (ROC AUC)")
+    labs(x = "Feature extractor", y = "ROC AUC", title = "Benchmark")
 
   ggsave(output_path, plot = p, width = 15, height = 6, dpi = 300)
 }
