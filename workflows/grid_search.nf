@@ -20,11 +20,11 @@ workflow grid_search_workflow {
     algorithms = ["ridge", "lasso", "linear", "mlp"]
     if (params.task == "classification"){
         grid_search(dataset, script_grid_search_classification, algorithms)
-        //roc_auc_curve(grid_search.out.test_predictions, script_roc_auc_curve)
+        roc_auc_curve(grid_search.out.test_predictions.flatten(), script_roc_auc_curve)
     }
     else {
         grid_search(dataset, script_grid_search_regression, algorithms)
-        //scatterplot(grid_search.out.test_predictions, script_scatterplot)
+        scatterplot(grid_search.out.test_predictions.flatten(), script_scatterplot)
     }
     emit:
     cv_results = grid_search.out.cv_results

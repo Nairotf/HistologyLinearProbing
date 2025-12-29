@@ -44,7 +44,7 @@ process split_dataset {
 process grid_search {
     publishDir "${params.outdir}/cv_result/", mode: 'copy', pattern: "*.cv_result.csv"
     publishDir "${params.outdir}/test_metrics/", mode: 'copy', pattern: "*.test_metrics.csv"
-    //publishDir "${params.outdir}/test_predictions/", mode: 'copy', pattern: "*.test_predictions.csv"
+    publishDir "${params.outdir}/test_predictions/", mode: 'copy', pattern: "*.test_predictions.csv"
     tag "${feature_extractor}"
     input:
         tuple path(dataset), val(feature_extractor), path(splits)
@@ -53,7 +53,7 @@ process grid_search {
     output:
         path("${feature_extractor}.${model}.cv_result.csv"), emit: cv_results
         path("${feature_extractor}.${model}.test_metrics.csv"), emit: test_metrics
-        //path("${feature_extractor}.${model}.test_predictions.csv"), emit: test_predictions
+        path("${feature_extractor}.${model}.*.test_predictions.csv"), emit: test_predictions
     script:
         """
         python -u ${script} $dataset $model $feature_extractor $splits
