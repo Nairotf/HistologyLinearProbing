@@ -34,7 +34,8 @@ main <- function(results_dir, output_path = "boxplot.png") {
   p <- ggplot(df, aes(x = feature_extractor, y = roc_auc, fill = algorithm)) +
     geom_boxplot() +
     theme_minimal() +
-    labs(x = "Feature extractor", y = "ROC AUC", title = "Benchmark")
+    labs(x = "Feature extractor", y = "ROC AUC", title = "Benchmark") +
+    ylim(0.5, 1)
 
   ggsave(output_path, plot = p, width = 15, height = 6, dpi = 300)
 }
