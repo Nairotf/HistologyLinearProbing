@@ -203,7 +203,7 @@ grid_search = GridSearchCV(
     scoring=["accuracy", "roc_auc", "f1", "precision", "recall"],
     verbose=3,
     # Use single core to avoid loky resource_tracker issues inside containers
-    n_jobs=16,
+    n_jobs=1,
     return_train_score=True,
     refit="roc_auc",
 )
@@ -222,13 +222,15 @@ for fold in range(num_folds):
     y_train = y[train_indices]
     X_test = X_features[test_indices]
     y_test = y[test_indices]
+    # Get slide_ids corresponding to test_indices (indices are in same order as slide_ids list)
+    slide_ids_test = np.array(slide_ids)[test_indices]
     best_pipeline.fit(X_train, y_train)
     y_pred = best_pipeline.predict(X_test)
     y_prob = best_pipeline.predict_proba(X_test)[:, 1]
     test_metrics = eval_test_metrics(y_test, y_pred, y_prob)
     test_metrics["fold"] = fold
     results.append(test_metrics)
-    y_predictions = pd.DataFrame({"y_true": y_test, "y_pred": y_prob})
+    y_predictions = pd.DataFrame({"slide_id": slide_ids_test, "y_true": y_test, "y_pred": y_prob})
     y_predictions.to_csv(f"{feature_extractor}.{model}.{fold}.test_predictions.csv", index=False)
 
 test_metrics = pd.concat(results)
