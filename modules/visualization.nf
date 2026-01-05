@@ -1,7 +1,7 @@
 process boxplot {
     publishDir "${params.outdir}/plots/", mode: "copy"
     input:
-    path(cv_results)
+    path(test_metrics_files)
     path(script_boxplot)
     output:
     path("boxplot.png")
