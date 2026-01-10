@@ -15,6 +15,7 @@ from sklearn.metrics import (
 from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection._split import BaseCrossValidator
+from joblib import dump
 
 
 def eval_test_metrics(y_true, y_pred):
@@ -201,8 +202,7 @@ grid_search = GridSearchCV(
     cv=cv_splitter,
     scoring=["r2", "neg_mean_squared_error"],
     verbose=3,
-    # Use single core to avoid loky resource_tracker issues inside containers
-    n_jobs=16,
+    n_jobs=1,
     return_train_score=True,
     refit="r2",
 )
@@ -234,3 +234,5 @@ test_metrics["feature_extractor"] = feature_extractor
 test_metrics["model"] = model
 print(test_metrics)
 test_metrics.to_csv(f"{feature_extractor}.{model}.test_metrics.csv", index=False)
+
+dump(best_pipeline, f"{feature_extractor}.{model}.pipeline.joblib")
