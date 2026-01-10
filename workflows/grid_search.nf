@@ -17,7 +17,7 @@ workflow grid_search_workflow {
     script_scatterplot
     script_roc_auc_curve
     main:
-    algorithms = ["ridge", "lasso", "linear", "mlp"]
+    algorithms = ["ridge", "lasso", "linear"] //, "mlp"]
     if (params.task == "classification"){
         grid_search(dataset, script_grid_search_classification, algorithms)
         roc_auc_curve(grid_search.out.test_predictions.flatten(), script_roc_auc_curve)
