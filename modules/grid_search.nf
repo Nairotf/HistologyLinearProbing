@@ -42,6 +42,7 @@ process split_dataset {
 }
 
 process grid_search {
+    publishDir "${params.outdir}/models/", mode: 'copy', pattern: "*.pipeline.joblib"
     publishDir "${params.outdir}/cv_result/", mode: 'copy', pattern: "*.cv_result.csv"
     publishDir "${params.outdir}/test_metrics/", mode: 'copy', pattern: "*.test_metrics.csv"
     publishDir "${params.outdir}/test_predictions/", mode: 'copy', pattern: "*.test_predictions.csv"
@@ -54,6 +55,7 @@ process grid_search {
         path("${feature_extractor}.${model}.cv_result.csv"), emit: cv_results
         path("${feature_extractor}.${model}.test_metrics.csv"), emit: test_metrics
         path("${feature_extractor}.${model}.*.test_predictions.csv"), emit: test_predictions
+        path("${feature_extractor}.${model}.pipeline.joblib"), emit: pipeline
     script:
         """
         python -u ${script} $dataset $model $feature_extractor $splits
