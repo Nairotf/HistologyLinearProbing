@@ -1,0 +1,5 @@
+dataset: '/mnt/beegfs/home/g.cabas/hrr_scanner/dataset_ki.csv'
+features_dir: "/mnt/beegfs/labs/hrr_scanner/processed_data/"
+outdir: "./results_hrr_ki_regr/"
+target: "target"
+task: "regression"

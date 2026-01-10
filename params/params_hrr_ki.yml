@@ -1,0 +1,5 @@
+dataset: '/mnt/beegfs/labs/hrr_scanner/class_dataset_ki_clean.csv'
+features_dir: "/mnt/beegfs/labs/hrr_scanner/processed_data/"
+outdir: "./results_hrr_ki/"
+target: "target"
+task: "classification"
