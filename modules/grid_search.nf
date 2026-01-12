@@ -46,6 +46,7 @@ process grid_search {
     publishDir "${params.outdir}/cv_result/", mode: 'copy', pattern: "*.cv_result.csv"
     publishDir "${params.outdir}/test_metrics/", mode: 'copy', pattern: "*.test_metrics.csv"
     publishDir "${params.outdir}/test_predictions/", mode: 'copy', pattern: "*.test_predictions.csv"
+    publishDir "${params.outdir}/best_params/", mode: 'copy', pattern: "*.best_params.json"
     tag "${feature_extractor}"
     input:
         tuple path(dataset), val(feature_extractor), path(splits)
@@ -56,6 +57,7 @@ process grid_search {
         path("${feature_extractor}.${model}.test_metrics.csv"), emit: test_metrics
         path("${feature_extractor}.${model}.*.test_predictions.csv"), emit: test_predictions
         path("${feature_extractor}.${model}.pipeline.joblib"), emit: pipeline
+        path("${feature_extractor}.${model}.best_params.json"), emit: best_params
     script:
         """
         python -u ${script} $dataset $model $feature_extractor $splits
@@ -65,5 +67,25 @@ process grid_search {
         touch ${feature_extractor}.${model}.cv_result.csv
         touch ${feature_extractor}.${model}.test_metrics.csv
         touch ${feature_extractor}.${model}.test_predictions.csv
+        touch ${feature_extractor}.${model}.pipeline.joblib
+        touch ${feature_extractor}.${model}.best_params.json
         """
+}
+
+process concat_results {
+    publishDir "${params.outdir}/test_metrics/", mode:"copy"
+    input:
+    path(csv)
+    output:
+    path("summary.csv"), emit: summary
+    script:
+    """
+    head -n 1 ${csv[0]} > head.txt
+    cat ${csv} | grep -v "fold" > body.txt
+    cat head.txt body.txt > summary.csv
+    """
+    stub:
+    """
+    touch summary.csv
+    """
 }

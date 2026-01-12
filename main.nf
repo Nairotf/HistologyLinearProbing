@@ -1,6 +1,7 @@
 include {
     import_features;
-    split_dataset
+    split_dataset;
+    concat_results
 } from './modules/grid_search.nf'
 include {
     grid_search_workflow
@@ -40,6 +41,7 @@ workflow {
     grid_search_workflow(import_features.out.dataset,
         script_grid_search_classification, script_grid_search_regression,
         script_scatterplot, script_roc_auc_curve)
-    summary_plot(grid_search_workflow.out.test_metrics.collect(),
+    concat_results(grid_search_workflow.out.test_metrics.collect())
+    summary_plot(concat_results.out.summary,
         script_boxplot_r2, script_boxplot_auc)
 }
