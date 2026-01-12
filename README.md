@@ -4,7 +4,7 @@
   <img src="imgs/logo.png" alt="Histology Linear Probing Pipeline" width="40%"/>
 </p>
 
-**Linear probing pipeline** for histopathology to evaluate different **feature extractors** (foundation models) using simple linear models (ridge, lasso and linear/logistic regression) on genes of interest (for example, *MKI67* and *ESR1*).
+**Linear probing pipeline** for histopathology to evaluate different **feature extractors** (foundation models) using **Elastic Net** regression/classification on genes of interest (for example, *MKI67* and *ESR1*).
 
 The workflow is implemented in **Nextflow DSL2** and uses containers (Wave/Singularity) to run both the Python part (feature import and grid search) and the R part (visualizations).
 
@@ -18,16 +18,22 @@ The workflow is implemented in **Nextflow DSL2** and uses containers (Wave/Singu
   - Reads the list of feature extractors from `params/feature_extractors.csv` (automatically loaded).
   - Uses `params.features_dir` to construct feature directory paths.
   - Launches:
-    - `import_features`: builds `.h5` files with features + target.
+    - `split_dataset`: splits the dataset into train/val/test folds for cross-validation.
+    - `import_features`: builds `.h5` files with features + target for each feature extractor.
     - `grid_search_workflow`: runs grid-search for regression or binary classification, depending on `params.task`.
+    - `concat_results`: concatenates all test metrics into a single summary file.
     - `summary_plot`: generates a global performance boxplot (R² or ROC AUC).
 
 - **`modules/grid_search.nf`**
-  - `process import_features`: runs `bin/import_features.py`.
-  - `process grid_search`: runs either the regression or classification script for each `feature_extractor × model (ridge, lasso, linear)` combination and publishes:
-    - `*.cv_result.csv`
-    - `*.test_metrics.csv`
-    - `*.test_predictions.csv`
+  - `process split_dataset`: runs `bin/make_splits.py` to create train/val/test splits for cross-validation.
+  - `process import_features`: runs `bin/import_features.py` to combine features and targets into `.h5` files.
+  - `process grid_search`: runs either the regression or classification script for each `feature_extractor × model` combination and publishes:
+    - `*.cv_result.csv` (full cross-validation results)
+    - `*.test_metrics.csv` (test set metrics)
+    - `*.test_predictions.csv` (test set predictions)
+    - `*.pipeline.joblib` (trained model pipeline)
+    - `*.best_params.json` (best hyperparameters)
+  - `process concat_results`: concatenates all test metrics into a single `summary.csv` file.
 
 - **`workflows/grid_search.nf`**
   - Defines the `grid_search_workflow` workflow, which:
@@ -48,9 +54,10 @@ The workflow is implemented in **Nextflow DSL2** and uses containers (Wave/Singu
   - `process boxplot`: wraps the R boxplot scripts (`boxplot_r2.R` or `boxplot_auc.R`).
 
 - **`bin/`**
+  - `make_splits.py`: creates train/val/test splits for cross-validation (5-fold by default).
   - `import_features.py`: loads the clinical/expression CSV, collects features by `slide_id`, and writes one `.h5` per extractor.
-  - `grid_search_regression.py`: applies optional IQR filtering, runs `GridSearchCV` with PCA + linear model (ridge/lasso/elastic-net/linear regression), and saves results and predictions for regression tasks.
-  - `grid_search_classification.py`: runs `GridSearchCV` with PCA + logistic regression variants (ridge/lasso/"linear" no-penalty), and saves results and predictions for binary classification tasks.
+  - `grid_search_regression.py`: applies optional IQR filtering, runs `GridSearchCV` with Elastic Net regression, and saves results and predictions for regression tasks.
+  - `grid_search_classification.py`: runs `GridSearchCV` with Elastic Net logistic regression, and saves results and predictions for binary classification tasks.
   - `scatter.R`: reads each regression `*test_predictions.csv` and generates `*.scatterplot.png`.
   - `roc_curve.R`: reads each classification `*test_predictions.csv` and generates `*.roc_auc_curve.png`.
   - `boxplot_r2.R`: reads all regression `*cv_result.csv` files and generates an R² `boxplot.png`.
@@ -129,13 +136,23 @@ All outputs are written under `params.outdir` (configured in the selected params
 
 - **Grid search results**
   - `cv_result/`
-    - `feature_extractor.model.cv_result.csv` (full `GridSearchCV` table).
+    - `feature_extractor.model.cv_result.csv` (full `GridSearchCV` table with cross-validation results).
   - `test_metrics/`
-    - Regression: `r2`, `mse`, `mae`, `rmse`.
-    - Classification: `accuracy`, `precision`, `recall`, `f1`, `roc_auc`.
+    - `feature_extractor.model.test_metrics.csv` with metrics per fold.
+    - `summary.csv` (concatenated test metrics from all feature extractors and models).
+    - Regression metrics: `r2`, `mse`, `mae`, `rmse`.
+    - Classification metrics: `accuracy`, `precision`, `recall`, `f1`, `roc_auc`.
   - `test_predictions/`
-    - Regression: `feature_extractor.model.test_predictions.csv` with `y_true`, `y_pred` (continuous).
-    - Classification: `feature_extractor.model.test_predictions.csv` with `y_true`, `y_score` (score/probability for the positive class).
+    - Regression: `feature_extractor.model.fold_X.test_predictions.csv` with `y_true`, `y_pred` (continuous).
+    - Classification: `feature_extractor.model.fold_X.test_predictions.csv` with `y_true`, `y_score` (score/probability for the positive class).
+  - `models/`
+    - `feature_extractor.model.pipeline.joblib` (trained model pipeline for each fold).
+  - `best_params/`
+    - `feature_extractor.model.best_params.json` (best hyperparameters found during grid search).
+  - `splits/`
+    - Train/val/test split files for cross-validation.
+  - `features/`
+    - `feature_extractor.h5` (combined features and targets for each extractor).
 
 - **Plots**
   - Regression:
@@ -159,17 +176,26 @@ All outputs are written under `params.outdir` (configured in the selected params
 - **Nextflow** ≥ 22.x
 - Access to Singularity/Wave containers (configured in `nextflow.config`).
 - Cluster with **SLURM** if using the `kutral` profile (default in this repo).
+- Python dependencies (provided via containers):
+  - `h5py`, `numpy`, `pandas`, `scikit-learn`, `tqdm`
+- R dependencies (provided via containers):
+  - `ggplot2`, `tidyverse`
 
-> Note: you do **not** need to manually install the Python/R dependencies: they are provided through the containers declared in `nextflow.config`.
+> **Note**: You do **not** need to manually install the Python/R dependencies: they are provided through the containers declared in `nextflow.config`. The pipeline uses Wave containers from the Seqera community registry.
 
 ---
 
 ### Basic usage
 
-1. Load the environment where Nextflow and Singularity are available.
-2. Ensure `params/feature_extractors.csv` exists and contains the feature extractor configurations you want to evaluate.
-3. Choose or edit a params file in `params/` (dataset, features_dir, target, outdir, task).
-4. Run the pipeline, for example:
+1. **Load the environment** where Nextflow and Singularity are available.
+2. **Configure feature extractors**: Ensure `params/feature_extractors.csv` exists and contains the feature extractor configurations you want to evaluate.
+3. **Choose or edit a params file** in `params/` directory:
+   - Set `dataset`: path to your CSV with expression/metadata.
+   - Set `features_dir`: base directory where feature directories are located.
+   - Set `target`: column name of the gene/target variable (e.g., `ESR1`, `MKI67`).
+   - Set `outdir`: output directory for this run.
+   - Set `task`: `"regression"` or `"classification"`.
+4. **Run the pipeline**:
 
 ```bash
 # ESR1 regression
@@ -177,13 +203,90 @@ nextflow run main.nf -profile kutral -params-file params/params_esr1_regr.yml
 
 # ESR1 binary classification
 nextflow run main.nf -profile kutral -params-file params/params_esr1_class.yml
+
+# MKI67 regression
+nextflow run main.nf -profile kutral -params-file params/params_mki67_regr.yml
 ```
 
-For local execution (without SLURM), you can use the `local` profile defined in `nextflow.config`:
+For **local execution** (without SLURM), you can use the `local` profile defined in `nextflow.config`:
 
 ```bash
 nextflow run main.nf -profile local -params-file params/params_esr1_regr.yml
 ```
+
+### Supported models
+
+The pipeline currently uses **Elastic Net** for both regression and classification tasks:
+
+- **Regression**: Elastic Net regression (combines L1 and L2 regularization)
+  - Hyperparameters: `alpha` (regularization strength) and `l1_ratio` (mixing parameter)
+  - No PCA is applied for Elastic Net (unlike other models that could be added)
+
+- **Classification**: Elastic Net logistic regression (combines L1 and L2 regularization)
+  - Hyperparameters: `C` (inverse regularization strength) and `l1_ratio` (mixing parameter)
+  - No PCA is applied for Elastic Net
+
+> **Note**: The underlying scripts (`grid_search_regression.py` and `grid_search_classification.py`) support other models (ridge, lasso, linear, MLP), but the workflow is currently configured to only run Elastic Net. To use other models, modify `workflows/grid_search.nf` to include additional algorithms in the `algorithms` list.
+
+Hyperparameters are optimized via `GridSearchCV` with 5-fold cross-validation.
+
+---
+
+### Output directory structure
+
+After running the pipeline, the output directory (`params.outdir`) will have the following structure:
+
+```
+results/
+├── best_params/              # Best hyperparameters for each model
+│   ├── feature_extractor.model.best_params.json
+│   └── ...
+├── cv_result/                # Full cross-validation results
+│   ├── feature_extractor.model.cv_result.csv
+│   └── ...
+├── features/                 # Combined features and targets
+│   ├── feature_extractor.h5
+│   └── ...
+├── models/                   # Trained model pipelines
+│   ├── feature_extractor.model.pipeline.joblib
+│   └── ...
+├── plots/                    # All generated plots
+│   ├── boxplot.png           # Summary boxplot (R² or ROC AUC)
+│   ├── *.scatterplot.png     # Regression scatterplots
+│   └── *.roc_auc_curve.png   # Classification ROC curves
+├── splits/                   # Train/val/test splits
+│   ├── target/
+│   └── ...
+├── test_metrics/             # Test set metrics
+│   ├── feature_extractor.model.test_metrics.csv
+│   ├── summary.csv           # Concatenated summary
+│   └── ...
+├── test_predictions/         # Test set predictions
+│   ├── feature_extractor.model.fold_X.test_predictions.csv
+│   └── ...
+└── pipeline_info/            # Nextflow execution reports
+    ├── execution_report_*.html
+    ├── execution_timeline_*.html
+    ├── execution_trace_*.txt
+    └── pipeline_dag_*.html
+```
+
+---
+
+### Tips and best practices
+
+1. **Feature extractor configuration**: Make sure the `patch_encoder` and `slide_encoder` names in `params/feature_extractors.csv` match the directory structure in your `features_dir`.
+
+2. **Cross-validation**: The pipeline uses 5-fold cross-validation by default. Each fold generates separate test metrics and predictions.
+
+3. **Model selection**: The pipeline currently uses Elastic Net for all feature extractors. The scripts support other models (ridge, lasso, linear, MLP), but they need to be enabled in the workflow configuration.
+
+4. **Memory requirements**: Grid search processes can be memory-intensive. The default configuration allocates 100G for grid search processes. Adjust in `nextflow.config` if needed.
+
+5. **Resume execution**: Nextflow supports resuming failed runs. Use `-resume` flag:
+   ```bash
+   nextflow run main.nf -profile kutral -params-file params/params_esr1_regr.yml -resume
+   ```
 
 ---
 
