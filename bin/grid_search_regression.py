@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
-from sklearn.linear_model import Ridge, Lasso, LinearRegression
+from sklearn.linear_model import Ridge, Lasso, LinearRegression, ElasticNet
 from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import (
     mean_squared_error,
@@ -16,6 +16,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection._split import BaseCrossValidator
 from joblib import dump
+import json
 
 
 def eval_test_metrics(y_true, y_pred):
@@ -82,17 +83,17 @@ def create_pipeline(model):
                 ("linear", LinearRegression()),
             ]
         )
-    elif model == "mlp":
+    elif model == "elasticnet":
         param_grid = {
-            "mlp__hidden_layer_sizes": [(100,), (200,), (300,), (100, 100), (200, 200), (300, 300), (300, 200, 100)],
-            "mlp__activation": ["relu"],
-            "mlp__solver": ["adam"],
-            "mlp__alpha": [0.001, 0.01],
-            "mlp__max_iter": [10, 20, 30, 40, 50, 80, 100],
+            "reg__alpha": [0.1, 1.0, 10.0],
+            "reg__l1_ratio": [0, 0.2, 0.4, 0.6, 0.8, 1],
         }
         pipeline = Pipeline(
             [
-                ("mlp", MLPRegressor(random_state=42)),
+                (
+                    "reg",
+                    ElasticNet()
+                ),
             ]
         )
     else:
@@ -202,7 +203,7 @@ grid_search = GridSearchCV(
     cv=cv_splitter,
     scoring=["r2", "neg_mean_squared_error"],
     verbose=3,
-    n_jobs=1,
+    n_jobs=16,
     return_train_score=True,
     refit="r2",
 )
@@ -214,6 +215,7 @@ cv_results = pd.DataFrame(grid_search.cv_results_)
 cv_results.to_csv(f"{feature_extractor}.{model}.cv_result.csv", index=False)
 
 best_pipeline = grid_search.best_estimator_
+best_params = grid_search.best_params_
 results = []
 for fold in range(num_folds):
     train_indices, val_indices, test_indices = load_splits(fold)
@@ -234,5 +236,6 @@ test_metrics["feature_extractor"] = feature_extractor
 test_metrics["model"] = model
 print(test_metrics)
 test_metrics.to_csv(f"{feature_extractor}.{model}.test_metrics.csv", index=False)
-
+with open(f"{feature_extractor}.{model}.best_params.json", "w") as f:
+    json.dump(best_params, f)
 dump(best_pipeline, f"{feature_extractor}.{model}.pipeline.joblib")
