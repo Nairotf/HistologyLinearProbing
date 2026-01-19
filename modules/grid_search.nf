@@ -1,5 +1,5 @@
 process import_features {
-    publishDir "${params.outdir}/features/", mode: "copy"
+    publishDir "${params.outdir}/features/", mode: "copy", pattern: "*.h5"
     tag "${feature_extractor}"
     input:
         tuple path(dataset), val(target_column), path(splits)
@@ -31,8 +31,9 @@ process split_dataset {
         """
     stub:
         """
-        mkdir -p splits/$target_column/
-        cp $dataset splits/$target_column/
+        mkdir -p ./$target_column/
+        cp $dataset ./$target_column/
+        cd ./$target_column/
         touch splits_0_bool.csv
         touch splits_1_bool.csv
         touch splits_2_bool.csv
@@ -66,9 +67,11 @@ process grid_search {
         """
         touch ${feature_extractor}.${model}.cv_result.csv
         touch ${feature_extractor}.${model}.test_metrics.csv
-        touch ${feature_extractor}.${model}.test_predictions.csv
         touch ${feature_extractor}.${model}.pipeline.joblib
         touch ${feature_extractor}.${model}.best_params.json
+        for i in {0..9}; do
+            touch ${feature_extractor}.${model}.\$i.test_predictions.csv
+        done
         """
 }
 
