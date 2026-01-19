@@ -15,23 +15,6 @@ process boxplot {
     """
 }
 
-process scatterplot {
-    publishDir "${params.outdir}/plots/", mode: 'copy'
-    input:
-    path(test_predictions)
-    path(script)
-    output:
-    path("${test_predictions}.scatterplot.png"), emit: scatterplot
-    script:
-    """
-    Rscript ${script} $test_predictions
-    cp scatterplot.png ${test_predictions}.scatterplot.png
-    """
-    stub:
-    """
-    touch ${test_predictions}.scatterplot.png
-    """
-}
 
 process roc_auc_curve {
     publishDir "${params.outdir}/plots/", mode: 'copy'

@@ -30,18 +30,13 @@ workflow {
     script_split_dataset = Channel.value(file("${projectDir}/bin/make_splits.py"))
     script_import_features = Channel.value(file("${projectDir}/bin/import_features.py"))
     script_grid_search_classification = Channel.value(file("${projectDir}/bin/grid_search_classification.py"))
-    script_grid_search_regression = Channel.value(file("${projectDir}/bin/grid_search_regression.py"))
-    script_scatterplot = Channel.value(file("${projectDir}/bin/scatter.R"))
     script_roc_auc_curve = Channel.value(file("${projectDir}/bin/roc_curve.R"))
-    script_boxplot_r2 = Channel.value(file("${projectDir}/bin/boxplot_r2.R"))
     script_boxplot_auc = Channel.value(file("${projectDir}/bin/boxplot_auc.R"))
 
     split_dataset(dataset, params.target, script_split_dataset)
     import_features(split_dataset.out.splits, feature_paths, script_import_features)
     grid_search_workflow(import_features.out.dataset,
-        script_grid_search_classification, script_grid_search_regression,
-        script_scatterplot, script_roc_auc_curve)
+        script_grid_search_classification, script_roc_auc_curve)
     concat_results(grid_search_workflow.out.test_metrics.collect())
-    summary_plot(concat_results.out.summary,
-        script_boxplot_r2, script_boxplot_auc)
+    summary_plot(concat_results.out.summary, script_boxplot_auc)
 }

@@ -5,13 +5,7 @@ include {
 workflow summary_plot {
     take:
     test_metrics
-    script_boxplot_r2
     script_boxplot_auc
     main:
-    if (params.task == "classification"){
-        boxplot(test_metrics, script_boxplot_auc)
-    }
-    else {
-        boxplot(test_metrics, script_boxplot_r2)
-    }
+    boxplot(test_metrics, script_boxplot_auc)
 }

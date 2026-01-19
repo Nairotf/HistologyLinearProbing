@@ -62,11 +62,11 @@
         },
         "task": {
           "type": "string",
-          "enum": ["regression", "classification"],
+          "enum": ["classification"],
           "description": "Type of machine learning task to perform",
-          "help_text": "Either 'regression' for continuous target prediction or 'classification' for binary classification tasks.",
+          "help_text": "'classification' for binary classification tasks. Up to now only this one is supported.",
           "fa_icon": "fas fa-tasks",
-          "errorMessage": "The task must be either 'regression' or 'classification'."
+          "errorMessage": "The task must be 'classification'."
         }
       },
       "required": [
