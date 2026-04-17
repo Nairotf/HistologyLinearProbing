@@ -5,12 +5,14 @@ suppressPackageStartupMessages({
   library(readr)
 })
 
-compute_roc <- function(y_true, y_score, n_thresholds = 100L) {
-  # thresholds from 0 to 1
-  ts <- seq(0, 1, length.out = n_thresholds)
+compute_roc <- function(y_true, y_score) {
+  ts <- sort(unique(y_score), decreasing = TRUE)
 
   tpr <- numeric(length(ts))
   fpr <- numeric(length(ts))
+
+  P <- sum(y_true == 1L)
+  N <- sum(y_true == 0L)
 
   for (i in seq_along(ts)) {
     thr <- ts[i]
@@ -18,22 +20,19 @@ compute_roc <- function(y_true, y_score, n_thresholds = 100L) {
 
     tp <- sum(y_true == 1L & y_pred == 1L)
     fp <- sum(y_true == 0L & y_pred == 1L)
-    fn <- sum(y_true == 1L & y_pred == 0L)
-    tn <- sum(y_true == 0L & y_pred == 0L)
 
-    tpr[i] <- if ((tp + fn) > 0) tp / (tp + fn) else 0
-    fpr[i] <- if ((fp + tn) > 0) fp / (fp + tn) else 0
+    tpr[i] <- tp / P
+    fpr[i] <- fp / N
   }
 
   data.frame(fpr = fpr, tpr = tpr)
 }
 
 compute_auc <- function(roc_df) {
-  # trapezoidal rule, sort by fpr
   roc_df <- roc_df[order(roc_df$fpr), ]
   x <- roc_df$fpr
   y <- roc_df$tpr
-  sum((x[-1] - x[-length(x)]) * (y[-1] + y[-length(y)]) / 2)
+  sum(diff(x) * (head(y, -1) + tail(y, -1)) / 2)
 }
 
 compute_roc_and_auc <- function(df) {
